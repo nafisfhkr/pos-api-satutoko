@@ -5,19 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Stock extends Model
+class Outlet extends Model
 {
     use HasFactory;
 
     protected $guarded = ['id'];
 
-    public function product()
+    
+    public function stocks()
     {
-        return $this->belongsTo(Product::class);
-    }
-
-    public function outlet()
-    {
-        return $this->belongsTo(Outlet::class);
+        return $this->hasMany(Stock::class);
     }
 }
