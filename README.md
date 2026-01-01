@@ -5,12 +5,12 @@
 Backend API untuk sistem POS berbasis Laravel dengan fokus pada arsitektur rapi, transaksi aman, dan konsistensi stok.
 
 ## Features & Status
-- ✅ Auth (login/logout)
-- ✅ Stocks (list & adjust)
-- ✅ Sales (DRAFT -> PAID)
-- ✅ Payments (Cash & QRIS + idempotency)
-- 🚧 Shifts (stub / planned)
-- 🚧 Reports (stub / planned)
+- ? Auth (login/logout)
+- ? Stocks (list & adjust)
+- ? Sales (DRAFT -> PAID)
+- ? Payments (Cash & QRIS + idempotency)
+- ?? Shifts (stub / planned)
+- ?? Reports (stub / planned)
 
 ## Tech Stack & Requirements
 - Laravel 12 + Sanctum
@@ -32,6 +32,9 @@ php artisan serve
 3) Buat sale (DRAFT)
 4) Tambahkan item ke sale
 5) Lakukan pembayaran (cash / QRIS)
+
+## API Docs (Swagger UI)
+GitHub Pages: `https://nafisfhkr.github.io/pos-api-satutoko/`
 
 ## Auth
 Semua endpoint outlet wajib `auth:sanctum`.
@@ -138,6 +141,10 @@ GET `{{base_url}}/api/v1/outlets/{outletId}/reports/sales-summary`
 2) Atur variable: `base_url`, `token`, `outlet_id`
 3) Urutan test: Auth -> Stocks -> Sales -> Payments
 
+## Enable GitHub Pages
+1) Settings -> Pages
+2) Deploy from branch -> `main` -> `/docs`
+
 ## Project Structure (Overview)
 - Controller tipis untuk validasi dan response.
 - Business logic ada di `app/Services/Pos`.
@@ -158,3 +165,4 @@ app/Http/Requests
 app/Services/Pos
 app/Models
 ```
+

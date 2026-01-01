@@ -1,0 +1,407 @@
+openapi: 3.0.3
+info:
+  title: POS API
+  version: 1.0.0
+  description: API untuk POS dengan flow transaksi DRAFT -> PAID dan stok konsisten.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login dan generate token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: owner@example.com
+                password:
+                  type: string
+                  example: password
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalidate token)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BasicResponse"
+  /api/v1/outlets/{outletId}/stocks:
+    get:
+      tags: [Stocks]
+      summary: List stok outlet
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+      responses:
+        "200":
+          description: Daftar stok outlet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Stock"
+  /api/v1/outlets/{outletId}/stocks/adjust:
+    post:
+      tags: [Stocks]
+      summary: Adjust stok
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockAdjustRequest"
+      responses:
+        "201":
+          description: Stok berhasil disesuaikan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Stock"
+  /api/v1/outlets/{outletId}/sales:
+    post:
+      tags: [Sales]
+      summary: Buat sale (DRAFT)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleCreateRequest"
+      responses:
+        "201":
+          description: Sale DRAFT dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleResponse"
+  /api/v1/outlets/{outletId}/sales/{saleId}:
+    get:
+      tags: [Sales]
+      summary: Detail sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+        - $ref: "#/components/parameters/SaleId"
+      responses:
+        "200":
+          description: Detail sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleResponse"
+  /api/v1/outlets/{outletId}/sales/{saleId}/items:
+    post:
+      tags: [Sales]
+      summary: Tambah/update item sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+        - $ref: "#/components/parameters/SaleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleItemRequest"
+      responses:
+        "200":
+          description: Item ditambahkan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleResponse"
+  /api/v1/outlets/{outletId}/sales/{saleId}/pay/cash:
+    post:
+      tags: [Payments]
+      summary: Pembayaran cash
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+        - $ref: "#/components/parameters/SaleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayCashRequest"
+      responses:
+        "200":
+          description: Pembayaran cash berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+  /api/v1/outlets/{outletId}/sales/{saleId}/pay/qris:
+    post:
+      tags: [Payments]
+      summary: Pembayaran QRIS
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OutletId"
+        - $ref: "#/components/parameters/SaleId"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Kunci idempotensi untuk mencegah duplikasi payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayQrisRequest"
+      responses:
+        "200":
+          description: Pembayaran QRIS berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+  parameters:
+    OutletId:
+      name: outletId
+      in: path
+      required: true
+      schema:
+        type: integer
+      example: 1
+    SaleId:
+      name: saleId
+      in: path
+      required: true
+      schema:
+        type: integer
+      example: 1
+  schemas:
+    BasicResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: "#/components/schemas/User"
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+    Stock:
+      type: object
+      properties:
+        id:
+          type: integer
+        outlet_id:
+          type: integer
+        product_id:
+          type: integer
+        qty:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    StockAdjustRequest:
+      type: object
+      required: [product_id, qty]
+      properties:
+        product_id:
+          type: integer
+        qty:
+          type: integer
+        reason:
+          type: string
+    SaleCreateRequest:
+      type: object
+      properties:
+        note:
+          type: string
+    SaleItemRequest:
+      type: object
+      required: [product_id, qty]
+      properties:
+        product_id:
+          type: integer
+        qty:
+          type: integer
+        unit_price:
+          type: number
+          format: float
+    SaleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        qty:
+          type: integer
+        unit_price:
+          type: number
+          format: float
+        subtotal:
+          type: number
+          format: float
+    Sale:
+      type: object
+      properties:
+        id:
+          type: integer
+        outlet_id:
+          type: integer
+        status:
+          type: string
+        invoice_no:
+          type: string
+        note:
+          type: string
+        subtotal:
+          type: number
+          format: float
+        discount:
+          type: number
+          format: float
+        tax:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        paid_at:
+          type: string
+          format: date-time
+    SaleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/Sale"
+            - type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SaleItem"
+    PayCashRequest:
+      type: object
+      required: [cash_received]
+      properties:
+        cash_received:
+          type: number
+          format: float
+    PayQrisRequest:
+      type: object
+      required: [reference_no]
+      properties:
+        reference_no:
+          type: string
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        method:
+          type: string
+        amount:
+          type: number
+          format: float
+        cash_received:
+          type: number
+          format: float
+        change_amount:
+          type: number
+          format: float
+        reference_no:
+          type: string
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            payment:
+              $ref: "#/components/schemas/Payment"
+            sale:
+              $ref: "#/components/schemas/Sale"
