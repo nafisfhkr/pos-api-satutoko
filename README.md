@@ -1,24 +1,48 @@
 # POS API (Laravel)
 
-Backend API untuk POS sederhana dengan flow transaksi DRAFT -> PAID, stok konsisten, dan struktur kode yang rapi.
+![Laravel 12](https://img.shields.io/badge/Laravel-12-red)
+![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4)
+Backend API untuk sistem POS berbasis Laravel dengan fokus pada arsitektur rapi, transaksi aman, dan konsistensi stok.
 
-## Stack
+## Features & Status
+- ✅ Auth (login/logout)
+- ✅ Stocks (list & adjust)
+- ✅ Sales (DRAFT -> PAID)
+- ✅ Payments (Cash & QRIS + idempotency)
+- 🚧 Shifts (stub / planned)
+- 🚧 Reports (stub / planned)
+
+## Tech Stack & Requirements
 - Laravel 12 + Sanctum
-- MySQL/PostgreSQL
+- PHP >= 8.2
+- Database: MySQL / PostgreSQL (SQLite juga bisa untuk demo)
 
-## Setup singkat
+## Quick Start
 ```
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed
+php artisan serve
 ```
+
+## Demo Flow (End-to-End)
+1) Login untuk mendapatkan token
+2) Adjust stok produk
+3) Buat sale (DRAFT)
+4) Tambahkan item ke sale
+5) Lakukan pembayaran (cash / QRIS)
 
 ## Auth
 Semua endpoint outlet wajib `auth:sanctum`.
 
 ### Login dan generate token
 POST `/api/v1/auth/login`
+```
+curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@example.com","password":"password"}'
+```
 ```json
 {
   "email": "owner@example.com",
@@ -50,52 +74,29 @@ Authorization: Bearer plain-text-token
 POST `/api/v1/auth/logout`
 
 ## Base URL
-`/api/v1`
+Default: `http://127.0.0.1:8000`  
+API prefix: `{{base_url}}/api/v1`
 
 ## Outlet Scope
 Semua resource transaksi dan stok di-scope ke outlet:
-`/outlets/{outletId}/...`
+`{{base_url}}/api/v1/outlets/{outletId}/...`
 
-## Endpoints (MVP)
+## Endpoints (MVP) - Ringkas
 
 ### Stok
-GET `/outlets/{outletId}/stocks`
+GET `{{base_url}}/api/v1/outlets/{outletId}/stocks`
 
-POST `/outlets/{outletId}/stocks/adjust`
-```json
-{
-  "product_id": 1,
-  "qty": 5,
-  "reason": "stock opname"
-}
-```
+POST `{{base_url}}/api/v1/outlets/{outletId}/stocks/adjust`
 
 ### Sales (DRAFT -> PAID)
-POST `/outlets/{outletId}/sales`
-```json
-{
-  "note": "penjualan pagi"
-}
-```
+POST `{{base_url}}/api/v1/outlets/{outletId}/sales`
 
-POST `/outlets/{outletId}/sales/{saleId}/items`
-```json
-{
-  "product_id": 1,
-  "qty": 2,
-  "unit_price": 15000
-}
-```
+POST `{{base_url}}/api/v1/outlets/{outletId}/sales/{saleId}/items`
 
-GET `/outlets/{outletId}/sales/{saleId}`
+GET `{{base_url}}/api/v1/outlets/{outletId}/sales/{saleId}`
 
 ### Payment
-POST `/outlets/{outletId}/sales/{saleId}/pay/cash`
-```json
-{
-  "cash_received": 50000
-}
-```
+POST `{{base_url}}/api/v1/outlets/{outletId}/sales/{saleId}/pay/cash`
 Response (contoh):
 ```json
 {
@@ -118,31 +119,35 @@ Response (contoh):
 }
 ```
 
-POST `/outlets/{outletId}/sales/{saleId}/pay/qris`
+POST `{{base_url}}/api/v1/outlets/{outletId}/sales/{saleId}/pay/qris`
 Headers:
 ```
 Idempotency-Key: unique-key-123
 ```
-Body:
-```json
-{
-  "reference_no": "QRIS-REF-001"
-}
-```
 
 ### Shifts (stub)
-POST `/outlets/{outletId}/shifts/open`
+POST `{{base_url}}/api/v1/outlets/{outletId}/shifts/open`
 
-POST `/outlets/{outletId}/shifts/{shiftId}/close`
+POST `{{base_url}}/api/v1/outlets/{outletId}/shifts/{shiftId}/close`
 
 ### Reports (stub)
-GET `/outlets/{outletId}/reports/sales-summary`
+GET `{{base_url}}/api/v1/outlets/{outletId}/reports/sales-summary`
 
-## Catatan Teknis
-- Semua pembayaran berjalan dalam DB transaction dan lock stok (`SELECT ... FOR UPDATE`).
-- Stok berkurang otomatis saat pembayaran sukses.
-- Setiap perubahan stok dicatat pada `inventory_movements`.
-- Idempotency untuk QRIS via header `Idempotency-Key`.
+## Testing with Postman
+1) Import collection: `postman/pos-api.postman_collection.json`
+2) Atur variable: `base_url`, `token`, `outlet_id`
+3) Urutan test: Auth -> Stocks -> Sales -> Payments
+
+## Project Structure (Overview)
+- Controller tipis untuk validasi dan response.
+- Business logic ada di `app/Services/Pos`.
+- Middleware `EnsureOutletAccess` untuk outlet scoping.
+
+## Notes for Reviewers
+- Payment memakai DB transaction + row locking untuk mencegah oversell.
+- Stok berkurang atomik dan tercatat di `inventory_movements`.
+- Idempotency QRIS via header `Idempotency-Key`.
+- Shifts & Reports masih stub sebagai placeholder scope berikutnya.
 
 ## Struktur Folder Utama
 ```
