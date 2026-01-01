@@ -5,34 +5,39 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;      
-use App\Models\Outlet;     
-use App\Models\Category;  
-use App\Models\Product;   
-use App\Models\Stock;     
+use App\Models\User;
+use App\Models\Outlet;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\Stock;
+use App\Models\InventoryMovement;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 1. Buat User Owner
-        User::create([
-            'name' => 'Owner Admin',
-            'email' => 'admin@pos.com',
-            'password' => Hash::make('password'),
-        ]);
+        User::updateOrCreate(
+            ['email' => 'owner@example.com'],
+            [
+                'name' => 'Owner',
+                'password' => Hash::make('password'),
+            ]
+        );
 
         // 2. Buat Outlet
-        $outlet = Outlet::create([
-            'name' => 'Cabang Pusat - Jakarta',
-            'address' => 'Jl. Sudirman No. 1',
-            'phone' => '081234567890'
-        ]);
+        $outlet = Outlet::firstOrCreate(
+            ['name' => 'Cabang Pusat - Jakarta'],
+            [
+                'address' => 'Jl. Sudirman No. 1',
+                'phone' => '081234567890',
+            ]
+        );
 
         // 3. Buat Kategori
-        $catCoffee = Category::create(['name' => 'Coffee']);
-        $catSnack = Category::create(['name' => 'Snacks']);
-        $catFood = Category::create(['name' => 'Main Course']);
+        $catCoffee = Category::firstOrCreate(['name' => 'Coffee']);
+        $catSnack = Category::firstOrCreate(['name' => 'Snacks']);
+        $catFood = Category::firstOrCreate(['name' => 'Main Course']);
 
         // 4. Buat Produk Dummy
         $products = [
@@ -63,14 +68,33 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($products as $prodData) {
-            $product = Product::create($prodData);
+            $product = Product::firstOrCreate(
+                ['sku' => $prodData['sku']],
+                $prodData
+            );
 
             // 5. Isi Stok Awal
-            Stock::create([
-                'outlet_id' => $outlet->id,
-                'product_id' => $product->id,
-                'qty' => 100
-            ]);
+            $stock = Stock::firstOrCreate(
+                [
+                    'outlet_id' => $outlet->id,
+                    'product_id' => $product->id,
+                ],
+                ['qty' => 100]
+            );
+
+            InventoryMovement::firstOrCreate(
+                [
+                    'outlet_id' => $outlet->id,
+                    'product_id' => $product->id,
+                    'reference_type' => 'seed',
+                    'reference_id' => null,
+                ],
+                [
+                    'qty_delta' => $stock->qty,
+                    'reason' => 'initial stock',
+                    'user_id' => null,
+                ]
+            );
         }
     }
 }
